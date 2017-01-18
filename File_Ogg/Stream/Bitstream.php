@@ -2,9 +2,10 @@
 /* vim: set expandtab tabstop=4 shiftwidth=4: */
 // +----------------------------------------------------------------------------+
 // | File_Ogg PEAR Package for Accessing Ogg Bitstreams                         |
-// | Copyright (c) 2005-2007                                                    |
+// | Copyright (c) 2005-2017                                                    |
 // | David Grant <david@grant.org.uk>                                           |
 // | Tim Starling <tstarling@wikimedia.org>                                     |
+// | Brion Vibber <bvibber@wikimedia.org>                                       |
 // +----------------------------------------------------------------------------+
 // | This library is free software; you can redistribute it and/or              |
 // | modify it under the terms of the GNU Lesser General Public                 |
@@ -21,6 +22,7 @@
 // | Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA |
 // +----------------------------------------------------------------------------+
 
+namespace File_Ogg\Stream;
 
 /**
  * @author      David Grant <david@grant.org.uk>, Tim Starling <tstarling@wikimedia.org>
@@ -31,7 +33,7 @@
  * @package     File_Ogg
  * @version     CVS: $Id$
  */
-class File_Ogg_Bitstream
+class Bitstream
 {
     /**
      * The serial number of this logical stream.

@@ -2,9 +2,10 @@
 /* vim: set expandtab tabstop=4 shiftwidth=4: */
 // +----------------------------------------------------------------------------+
 // | File_Ogg PEAR Package for Accessing Ogg Bitstreams                         |
-// | Copyright (c) 2005-2007                                                    |
+// | Copyright (c) 2005-2017                                                    |
 // | David Grant <david@grant.org.uk>                                           |
 // | Tim Starling <tstarling@wikimedia.org>                                     |
+// | Brion Vibber <bvibber@wikimedia.org>                                       |
 // +----------------------------------------------------------------------------+
 // | This library is free software; you can redistribute it and/or              |
 // | modify it under the terms of the GNU Lesser General Public                 |
@@ -21,12 +22,10 @@
 // | Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA |
 // +----------------------------------------------------------------------------+
 
-require_once('File/Ogg/Bitstream.php');
+namespace File_Ogg\Stream;
 
-define( 'OGG_THEORA_IDENTIFICATION_HEADER', 0x80 );
-define( 'OGG_THEORA_COMMENTS_HEADER', 0x81 );
-define( 'OGG_THEORA_IDENTIFICATION_PAGE_OFFSET', 0 );
-define( 'OGG_THEORA_COMMENTS_PAGE_OFFSET', 1 );
+use \File_Ogg;
+use \File_Ogg\Error;
 
 
 /**
@@ -39,8 +38,13 @@ define( 'OGG_THEORA_COMMENTS_PAGE_OFFSET', 1 );
  * @package     File_Ogg
  * @version     CVS: $Id$
  */
-class File_Ogg_Theora extends File_Ogg_Media
+class Theora extends Media
 {
+    const IDENTIFICATION_HEADER = 0x80;
+    const COMMENTS_HEADER = 0x81;
+    const IDENTIFICATION_PAGE_OFFSET = 0;
+    const COMMENTS_PAGE_OFFSET = 1;
+
     /**
      * @access  private
      */
@@ -87,7 +91,7 @@ class File_Ogg_Theora extends File_Ogg_Media
      */
     function getIdentificationString()
     {
-        return OGG_STREAM_CAPTURE_THEORA;
+        return Reader::STREAM_CAPTURE_THEORA;
     }
 
     /**
@@ -96,7 +100,7 @@ class File_Ogg_Theora extends File_Ogg_Media
      */
     function _decodeIdentificationHeader()
     {
-        $this->_decodeCommonHeader(OGG_THEORA_IDENTIFICATION_HEADER, OGG_THEORA_IDENTIFICATION_PAGE_OFFSET);
+        $this->_decodeCommonHeader(self::IDENTIFICATION_HEADER, self::IDENTIFICATION_PAGE_OFFSET);
         $h = File_Ogg::_readBigEndian( $this->_filePointer, array(
             'VMAJ' => 8,
             'VMIN' => 8,
@@ -233,7 +237,7 @@ class File_Ogg_Theora extends File_Ogg_Media
      */
     function _decodeCommentsHeader()
     {
-        $this->_decodeCommonHeader(OGG_THEORA_COMMENTS_HEADER, OGG_THEORA_COMMENTS_PAGE_OFFSET);
+        $this->_decodeCommonHeader(self::COMMENTS_HEADER, self::COMMENTS_PAGE_OFFSET);
         $this->_decodeBareCommentsHeader();
     }
 

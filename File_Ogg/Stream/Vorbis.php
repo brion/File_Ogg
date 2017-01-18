@@ -2,9 +2,10 @@
 /* vim: set expandtab tabstop=4 shiftwidth=4: */
 // +----------------------------------------------------------------------------+
 // | File_Ogg PEAR Package for Accessing Ogg Bitstreams                         |
-// | Copyright (c) 2005-2007                                                    |
+// | Copyright (c) 2005-2017                                                    |
 // | David Grant <david@grant.org.uk>                                           |
 // | Tim Starling <tstarling@wikimedia.org>                                     |
+// | Brion Vibber <bvibber@wikimedia.org>                                       |
 // +----------------------------------------------------------------------------+
 // | This library is free software; you can redistribute it and/or              |
 // | modify it under the terms of the GNU Lesser General Public                 |
@@ -21,50 +22,11 @@
 // | Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA |
 // +----------------------------------------------------------------------------+
 
-require_once('File/Ogg/Bitstream.php');
+namespace File_Ogg\Stream;
 
-/**
- * Check number for the first header in a Vorbis stream.
- *
- * @access  private
- */
-define("OGG_VORBIS_IDENTIFICATION_HEADER",  1);
-/**
- * Check number for the second header in a Vorbis stream.
- *
- * @access  private
- */
-define("OGG_VORBIS_COMMENTS_HEADER",        3);
-/**
- * Check number for the third header in a Vorbis stream.
- *
- * @access  private
- */
-define("OGG_VORBIS_SETUP_HEADER",           5);
-/**
- * Error thrown if the stream appears to be corrupted.
- *
- * @access  private
- */
-define("OGG_VORBIS_ERROR_UNDECODABLE",      OGG_ERROR_UNDECODABLE);
-/**
- * Error thrown if the user attempts to extract a comment using a comment key
- * that does not exist.
- *
- * @access  private
- */
-define("OGG_VORBIS_ERROR_INVALID_COMMENT",  2);
+use \File_Ogg;
+use \File_Ogg\Error;
 
-define("OGG_VORBIS_IDENTIFICATION_PAGE_OFFSET", 0);
-define("OGG_VORBIS_COMMENTS_PAGE_OFFSET",       1);
-
-/**
- * Error thrown if the user attempts to write a comment containing an illegal
- * character
- *
- * @access  private
- */
-define("OGG_VORBIS_ERROR_ILLEGAL_COMMENT",  3);
 
 /**
  * Extract the contents of a Vorbis logical stream.
@@ -83,8 +45,29 @@ define("OGG_VORBIS_ERROR_ILLEGAL_COMMENT",  3);
  * @package     File_Ogg
  * @version     CVS: $Id$
  */
-class File_Ogg_Vorbis extends File_Ogg_Media
+class Vorbis extends Media
 {
+    /**
+     * Check number for the first header in a Vorbis stream.
+     *
+     * @access private
+     */
+    const IDENTIFICATION_HEADER = 1;
+    /**
+     * Check number for the second header in a Vorbis stream.
+     *
+     * @access private
+     */
+    const COMMENTS_HEADER = 3;
+    /**
+     * Check number for the third header in a Vorbis stream.
+     *
+     * @access private
+     */
+    const SETUP_HEADER = 5;
+
+    const IDENTIFICATION_PAGE_OFFSET = 0;
+    const COMMENTS_PAGE_OFFSET = 1;
 
     /**
      * Version of vorbis specification used.
@@ -170,7 +153,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         parent::__construct($streamSerial, $streamData, $filePointer);
         $this->_decodeIdentificationHeader();
-        $this->_decodeCommentsHeader(OGG_VORBIS_COMMENTS_HEADER, OGG_VORBIS_COMMENTS_PAGE_OFFSET);
+        $this->_decodeCommentsHeader(self::COMMENTS_HEADER, self::COMMENTS_PAGE_OFFSET);
 
         $endSec =  $this->getSecondsFromGranulePos( $this->_lastGranulePos );
 	    $startSec = $this->getSecondsFromGranulePos( $this->_firstGranulePos );
@@ -210,7 +193,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
      */
     function _decodeIdentificationHeader()
     {
-        $this->_decodeCommonHeader(OGG_VORBIS_IDENTIFICATION_HEADER, OGG_VORBIS_IDENTIFICATION_PAGE_OFFSET);
+        $this->_decodeCommonHeader(self::IDENTIFICATION_HEADER, self::IDENTIFICATION_PAGE_OFFSET);
 
         $h = File_Ogg::_readLittleEndian($this->_filePointer, array(
             'vorbis_version'        => 32,
@@ -228,17 +211,17 @@ class File_Ogg_Vorbis extends File_Ogg_Media
         if ($h['vorbis_version'] == 0)
             $this->_version = $h['vorbis_version'];
         else
-            throw new OggException("Stream is undecodable due to an invalid vorbis stream version.", OGG_VORBIS_ERROR_UNDECODABLE);
+            throw new UndecodableException("Stream is undecodable due to an invalid vorbis stream version.");
 
         // The number of channels MUST be greater than 0.
         if ($h['audio_channels'] == 0)
-            throw new OggException("Stream is undecodable due to zero channels.", OGG_VORBIS_ERROR_UNDECODABLE);
+            throw new UndecodableException("Stream is undecodable due to zero channels.");
         else
             $this->_channels = $h['audio_channels'];
 
         // The sample rate MUST be greater than 0.
         if ($h['audio_sample_rate'] == 0)
-            throw new OggException("Stream is undecodable due to a zero sample rate.", OGG_VORBIS_ERROR_UNDECODABLE);
+            throw new UndecodableException("Stream is undecodable due to a zero sample rate.");
         else
             $this->_sampleRate = $h['audio_sample_rate'];
 
@@ -253,23 +236,23 @@ class File_Ogg_Vorbis extends File_Ogg_Media
         // blocksize_0 MUST be a valid blocksize.
         $blocksize_0 = pow(2, $h['blocksize_0']);
         if (FALSE == in_array($blocksize_0, $valid_block_sizes))
-            throw new OggException("Stream is undecodable because blocksize_0 is $blocksize_0, which is not a valid size.", OGG_VORBIS_ERROR_UNDECODABLE);
+            throw new UndecodableException("Stream is undecodable because blocksize_0 is $blocksize_0, which is not a valid size.");
 
         // Extract bits 5 to 8 from the character data.
         // blocksize_1 MUST be a valid blocksize.
         $blocksize_1 = pow(2, $h['blocksize_1']);
         if (FALSE == in_array($blocksize_1, $valid_block_sizes))
-            throw new OggException("Stream is undecodable because blocksize_1 is not a valid size.", OGG_VORBIS_ERROR_UNDECODABLE);
+            throw new UndecodableException("Stream is undecodable because blocksize_1 is not a valid size.");
 
         // blocksize 0 MUST be less than or equal to blocksize 1.
         if ($blocksize_0 > $blocksize_1)
-            throw new OggException("Stream is undecodable because blocksize_0 is not less than or equal to blocksize_1.", OGG_VORBIS_ERROR_UNDECODABLE);
+            throw new UndecodableException("Stream is undecodable because blocksize_0 is not less than or equal to blocksize_1.");
 
         // The framing bit MUST be set to mark the end of the identification header.
         // Some encoders are broken though -- TS
         /*
         if ($h['framing_flag'] == 0)
-            throw new OggException("Stream in undecodable because the framing bit is not non-zero.", OGG_VORBIS_ERROR_UNDECODABLE);
+            throw new UndecodableException("Stream in undecodable because the framing bit is not non-zero.");
          */
 
         $this->_idHeader = $h;
@@ -288,14 +271,14 @@ class File_Ogg_Vorbis extends File_Ogg_Media
         // The framing bit MUST be set to mark the end of the comments header.
         $framing_bit = unpack("Cdata", fread($this->_filePointer, 1));
         if ($framing_bit['data'] != 1)
-            throw new OggException("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
+            throw new UndecodableException("Stream Undecodable");
     }
 
     /**
      * Get the 6-byte identification string expected in the common header
      */
     function getIdentificationString() {
-        return OGG_STREAM_CAPTURE_VORBIS;
+        return Reader::STREAM_CAPTURE_VORBIS;
     }
 
     /**

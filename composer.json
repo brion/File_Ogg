@@ -4,10 +4,15 @@
             "email": "tstarling@wikimedia.org",
             "name": "Tim Starling",
             "role": "Lead"
+        },
+        {
+            "email": "bvibber@wikimedia.org",
+            "name": "Brion Vibber",
+            "role": "Lead"
         }
     ],
     "autoload": {
-        "psr-0": {
+        "psr-4": {
             "File": "./"
         }
     },

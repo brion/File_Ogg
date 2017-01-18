@@ -2,9 +2,10 @@
 /* vim: set expandtab tabstop=4 shiftwidth=4: */
 // +----------------------------------------------------------------------------+
 // | File_Ogg PEAR Package for Accessing Ogg Bitstreams                         |
-// | Copyright (c) 2005-2007                                                    |
+// | Copyright (c) 2005-2017                                                    |
 // | David Grant <david@grant.org.uk>                                           |
 // | Tim Starling <tstarling@wikimedia.org>                                     |
+// | Brion Vibber <bvibber@wikimedia.org>                                       |
 // +----------------------------------------------------------------------------+
 // | This library is free software; you can redistribute it and/or              |
 // | modify it under the terms of the GNU Lesser General Public                 |
@@ -21,7 +22,10 @@
 // | Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA |
 // +----------------------------------------------------------------------------+
 
-require_once('File/Ogg/Media.php');
+namespace File_Ogg\Stream;
+
+use \File_Ogg;
+use \File_Ogg\Error;
 
 /**
  * @author      David Grant <david@grant.org.uk>, Tim Starling <tstarling@wikimedia.org>
@@ -33,7 +37,7 @@ require_once('File/Ogg/Media.php');
  * @package     File_Ogg
  * @version     CVS: $Id$
  */
-class File_Ogg_Flac extends File_Ogg_Media
+class Flac extends Media
 {
     /**
      * @access  private
@@ -66,18 +70,18 @@ class File_Ogg_Flac extends File_Ogg_Media
         // Check if this is the correct header.
         $packet = unpack("Cdata", fread($this->_filePointer, 1));
         if ($packet['data'] != 0x7f)
-            throw new OggException("Stream Undecodable", OGG_ERROR_UNDECODABLE);
+            throw new UndecodableException("Stream Undecodable");
     
         // The following four characters should be "FLAC".
         if (fread($this->_filePointer, 4) != 'FLAC')
-            throw new OggException("Stream is undecodable due to a malformed header.", OGG_ERROR_UNDECODABLE);
+            throw new UndecodableException("Stream is undecodable due to a malformed header.");
 
         $version = unpack("Cmajor/Cminor", fread($this->_filePointer, 2));
         $this->_version = "{$version['major']}.{$version['minor']}";
         if ($version['major'] > 1) {
-            throw new OggException("Cannot decode a version {$version['major']} FLAC stream", OGG_ERROR_UNDECODABLE);
+            throw new UndecodableException("Cannot decode a version {$version['major']} FLAC stream");
         }
-        $h = File_Ogg::_readBigEndian( $this->_filePointer, 
+        $h = Reader::_readBigEndian( $this->_filePointer, 
             array(
                 // Ogg-specific
                 'num_headers'       => 16,
@@ -90,7 +94,7 @@ class File_Ogg_Flac extends File_Ogg_Media
 
         // METADATA_BLOCK_STREAMINFO
         // The variable names are canonical, and come from the FLAC source (format.h)
-        $this->_streamInfo = File_Ogg::_readBigEndian( $this->_filePointer,
+        $this->_streamInfo = Reader::_readBigEndian( $this->_filePointer,
             array(
                 'min_blocksize'     => 16,
                 'max_blocksize'     => 16,
@@ -117,7 +121,7 @@ class File_Ogg_Flac extends File_Ogg_Media
     function _decodeCommentsHeader()
     {
         fseek($this->_filePointer, $this->_streamData['pages'][1]['body_offset'], SEEK_SET);
-        $blockHeader = File_Ogg::_readBigEndian( $this->_filePointer,
+        $blockHeader = Reader::_readBigEndian( $this->_filePointer,
             array(
                 'last_block' => 1,
                 'block_type' => 7,
@@ -125,7 +129,7 @@ class File_Ogg_Flac extends File_Ogg_Media
             )
         );
         if ($blockHeader['block_type'] != 4) {
-            throw new OggException("Stream Undecodable", OGG_ERROR_UNDECODABLE);
+            throw new UndecodableException("Stream Undecodable");
         }
         
         $this->_decodeBareCommentsHeader();
